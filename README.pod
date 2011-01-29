@@ -1,0 +1,116 @@
+=pod
+
+=head1 NAME
+
+Syntax::Feature::Sugar::Callbacks - Add sugar for declarative method callbacks
+
+=head1 VERSION
+
+version 0.001
+
+=head1 SYNOPSIS
+
+    use AnythingExportingMethodModifiers;
+    use syntax 'sugar/callbacks' => {
+        -callbacks => {
+            after   => {},
+            before  => {},
+            around  => { -before => ['$orig'] },
+        },
+    };
+
+    after  foo ($n) { $self->something($n) }
+    before bar ($n) { $self->something($n) }
+    around baz ($n) { $self->something($self->$orig($n)) }
+
+=head1 DESCRIPTION
+
+You probably won't use this extension directly. That's why it doesn't even
+have an C<import> method. Its main reasoning is the ability to provide
+on-the-fly sugar for method declarators, most commonly C<before>, C<after>
+and C<around>. This extension will directly dispatch to the original
+subroutine, and requires these to be setup before-hand. Currently, all
+callbacks will first receive the name of the declared method, followed by
+the code reference.
+
+Note that no cleanup of the original handlers will be performed. This is
+up to the exporting library or the user.
+
+=head1 METHODS
+
+=head2 install
+
+    $class->install( %arguments )
+
+Called by L<syntax> (or others) to install this extension into a namespace.
+
+=head1 SYNTAX
+
+All declarations must currently be in one of the forms
+
+    <keyword> <name> (<signature>) { <body> }
+    <keyword> <name> { <body> }
+
+The C<keyword> is the name of the declared callback. The C<name> can either
+be an identifier like you'd give to C<sub>, or a double-quoted string if
+you want the name to be dynamic:
+
+    after "$name" ($arg) { ... }
+
+The signature, if specified, should be in one of the following forms:
+
+    ($foo)
+    ($foo, $bar)
+    ($class:)
+    ($class: $foo, $bar)
+
+Variables before C<:> will be used as replacement for the invocant.
+Parameters specified via C<-before> and C<-middle> will always be included.
+
+The statement will automatically terminate after the block. The return
+value will be whatever the original callback returns.
+
+You can supply subroutine attributes right before the block.
+
+=head1 OPTIONS
+
+=head2 -invocant
+
+Defaults to C<$self>, but you might want to change this for very specialized
+classes.
+
+=head2 -callbacks
+
+This is the set of callbacks that should be setup. It should be a hash
+reference using callback names as keys and hash references of options as
+values. Possible per-callback options are C<-before> and C<-middle>. The
+C<-before> option is an array reference of parameters that come before the
+invocant. C<-middle> declares parameters going after the invocants, but
+before the parameters specified in the signature.
+
+=head1 SEE ALSO
+
+=over
+
+=item * L<syntax>
+
+=item * L<Devel::Declare>
+
+=back
+
+=head1 BUGS
+
+Please report any bugs or feature requests to bug-syntax-feature-sugar-callbacks@rt.cpan.org or through the web interface at:
+ http://rt.cpan.org/Public/Dist/Display.html?Name=Syntax-Feature-Sugar-Callbacks
+
+=head1 AUTHOR
+
+Robert 'phaylon' Sedlacek <rs@474.at>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2011 by Robert 'phaylon' Sedlacek.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
