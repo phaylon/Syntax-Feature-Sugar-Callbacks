@@ -66,11 +66,14 @@ sub _transform {
     $ctx->skip_declarator;
     $ctx->skipspace;
     $class->_inject($ctx, '(');
-    my $name = $class->_strip_name_portion($ctx);
+    my $name = $class->_strip_name_portion($ctx, $cb_options);
     my ($invocants, $parameters) = $class->_strip_signature($ctx, $options);
     my $attrs = $ctx->strip_attrs;
-    $class->_inject($ctx, $name);
-    $class->_inject($ctx, ', sub ');
+    if (defined $name) {
+        $class->_inject($ctx, $name);
+        $class->_inject($ctx, ',');
+    }
+    $class->_inject($ctx, ' sub ');
     $class->_inject($ctx, $attrs)
         if defined($attrs);
     $class->_inject($ctx, sprintf('BEGIN { %s->%s }; my (%s) = @_; (); ',
@@ -137,7 +140,7 @@ sub _strip_signature {
 }
 
 sub _strip_name_portion {
-    my ($class, $ctx) = @_;
+    my ($class, $ctx, $options) = @_;
     my $linestr = $ctx->get_linestr;
     if (my $name = $ctx->strip_name) {
         return pp($name);
@@ -153,6 +156,8 @@ sub _strip_name_portion {
         return qq{"$string"};
     }
     else {
+        return undef
+            if $options->{-allow_anon};
         croak sprintf q{Expected a name after '%s' keyword},
             $ctx->declarator;
     }
