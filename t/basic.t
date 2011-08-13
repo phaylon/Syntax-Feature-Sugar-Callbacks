@@ -6,17 +6,36 @@ do {
     package TestA;
     my %called;
     my @last_args;
-    sub around { @last_args = @_; $called{around}++ }
-    sub before { @last_args = @_; $called{before}++ }
-    sub after  { @last_args = @_; $called{after}++ }
+    sub around  { @last_args = @_; $called{around}++ }
+    sub before  { @last_args = @_; $called{before}++ }
+    sub after   { @last_args = @_; $called{after}++ }
+    sub fun     { @last_args = @_; $called{fun}++; shift }
+    sub method  { shift }
     use syntax 'sugar/callbacks' => {
         -invocant  => '$self',
         -callbacks => {
-            around => { -before => ['$orig'] },
-            before => {},
-            after  => {},
+            method  => { -allow_anon => 1 },
+            around  => { -before => ['$orig'] },
+            before  => {},
+            after   => {},
         },
     };
+    use syntax 'sugar/callbacks' => {
+        -invocant  => '',
+        -callbacks => {
+            fun     => { -only_anon => 1, -default => ['$foo'], -stmt => 1 },
+        },
+    };
+    my $fun = fun ($x) { $x }
+    ::is ref($last_args[0]), 'CODE', 'got code ref';
+    ::is $last_args[0]->(23), 23, 'correct result';
+    ::is $fun->(23), 23, 'correct result from returned sub';
+    ::is $called{fun}, 1, 'fun called once';
+    my $def_fun = fun { $foo }
+    ::is ref($def_fun), 'CODE', 'code ref without signature';
+    ::is $def_fun->(23), 23, 'correct result without signature';
+    my @methods = (method { $self, 23 }, method { $self, 17 });
+    ::is_deeply [$methods[0]->(93)], [93, 23], 'correct values';
     my $inv;
     before foo ($n) { $inv = $self; @last_args = @_; $n + 1 }
     ::is $last_args[0], 'foo', 'first name';

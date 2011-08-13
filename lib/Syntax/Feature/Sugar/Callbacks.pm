@@ -69,7 +69,8 @@ sub _transform {
     my $name = $cb_options->{ -only_anon }
         ? undef
         : $class->_strip_name_portion($ctx, $cb_options);
-    my ($invocants, $parameters) = $class->_strip_signature($ctx, $options);
+    my ($invocants, $parameters)
+        = $class->_strip_signature($ctx, $options, $cb_options);
     my $attrs = $ctx->strip_attrs;
     if (defined $name) {
         $class->_inject($ctx, $name);
@@ -78,9 +79,10 @@ sub _transform {
     $class->_inject($ctx, ' sub ');
     $class->_inject($ctx, $attrs)
         if defined($attrs);
-    $class->_inject($ctx, sprintf('BEGIN { %s->%s }; my (%s) = @_; (); ',
+    $class->_inject($ctx, sprintf('BEGIN { %s->%s(%s) }; my (%s) = @_; (); ',
         $class,
         '_handle_scope_end',
+        defined($name) ? 1 : $cb_options->{ -stmt } ? 1 : 0,
         join(', ',
             @{ $cb_options->{ -before } || [] },
             @$invocants,
@@ -92,11 +94,11 @@ sub _transform {
 }
 
 sub _handle_scope_end {
-    my ($class) = @_;
+    my ($class, $end_stmt) = @_;
     on_scope_end {
         my $linestr = Devel::Declare::get_linestr;
         my $offset  = Devel::Declare::get_linestr_offset;
-        substr($linestr, $offset, 0) = ');';
+        substr($linestr, $offset, 0) = $end_stmt ? ');' : ')';
         Devel::Declare::set_linestr($linestr);
     };
     return 1;
@@ -123,14 +125,15 @@ sub _inject {
 }
 
 sub _strip_signature {
-    my ($class, $ctx, $options) = @_;
+    my ($class, $ctx, $options, $cb_options) = @_;
     $ctx->skipspace;
     my $invocant_option = $options->{ -invocant };
     my @invocants = length($invocant_option)
         ? ($invocant_option)
         : ();
+    my @default   = @{ $cb_options->{ -default } || [] };
     my $signature = $ctx->strip_proto;
-    return [@invocants], []
+    return [@invocants], [@default]
         unless defined $signature and length $signature;
     my @parts =
         map { [ split m{ \s* , \s* }x, $_ ] }
@@ -251,12 +254,47 @@ classes.
 
 This is the set of callbacks that should be setup. It should be a hash
 reference using callback names as keys and hash references of options as
-values. Possible per-callback options are C<-before> and C<-middle>. The
-C<-before> option is an array reference of parameters that come before the
-invocant. C<-middle> declares parameters going after the invocants, but
-before the parameters specified in the signature. You can provide a true
-value for C<-allow_anon> if a name is optional, or C<-only_anon> if a name
-is never expected.
+values. Possible per-callback options are
+
+=back
+
+=item C<-before>
+
+An array reference of variable names that come before the invocant. A
+typical example would be the original code reference in C<around> method
+modifiers.
+
+=item C<-middle>
+
+An array reference of variable names that come after the invocants, but
+before the parameters specified in the signature. Use this if the code
+reference declared with the construct will receive a constant parameter.
+There is no current way to override this in the signature on a per-construct
+basis.
+
+=item C<-default>
+
+An array reference of variable names that are used when no signature was
+provided. An empty signature will not lead to the defaults being used.
+
+=item C<-stmt>
+
+By default, anonymous constructs will not automatically terminate the
+statement after the code block. If this option is set to a true value, all
+uses of the construct will be terminated.
+
+=item C<-allow_anon>
+
+If set to a true value, anonymous versions of this construct can be
+declared. If no name was specified, only the code reference will be passed
+on to the callback.
+
+=item C<-only_anon>
+
+If set to a true value, a name will not be expected after the keyword and
+before the signature.
+
+=over
 
 =head1 SEE ALSO
 
