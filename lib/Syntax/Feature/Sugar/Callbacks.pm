@@ -256,7 +256,7 @@ This is the set of callbacks that should be setup. It should be a hash
 reference using callback names as keys and hash references of options as
 values. Possible per-callback options are
 
-=back
+=over
 
 =item C<-before>
 
@@ -294,7 +294,7 @@ on to the callback.
 If set to a true value, a name will not be expected after the keyword and
 before the signature.
 
-=over
+=back
 
 =head1 SEE ALSO
 
