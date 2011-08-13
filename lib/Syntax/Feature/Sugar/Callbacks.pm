@@ -66,7 +66,9 @@ sub _transform {
     $ctx->skip_declarator;
     $ctx->skipspace;
     $class->_inject($ctx, '(');
-    my $name = $class->_strip_name_portion($ctx, $cb_options);
+    my $name = $cb_options->{ -only_anon }
+        ? undef
+        : $class->_strip_name_portion($ctx, $cb_options);
     my ($invocants, $parameters) = $class->_strip_signature($ctx, $options);
     my $attrs = $ctx->strip_attrs;
     if (defined $name) {
@@ -252,7 +254,9 @@ reference using callback names as keys and hash references of options as
 values. Possible per-callback options are C<-before> and C<-middle>. The
 C<-before> option is an array reference of parameters that come before the
 invocant. C<-middle> declares parameters going after the invocants, but
-before the parameters specified in the signature.
+before the parameters specified in the signature. You can provide a true
+value for C<-allow_anon> if a name is optional, or C<-only_anon> if a name
+is never expected.
 
 =head1 SEE ALSO
 
