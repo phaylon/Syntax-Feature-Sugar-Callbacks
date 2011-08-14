@@ -1,4 +1,6 @@
 {{$NEXT}}
+
+0.002     2011-08-14 02:06:28 Europe/Berlin
     - Added -stmt to force callbacks to be terminated.
     - Fixed statement termination issue for anon constructs.
     - Added -only_anon to enforce unnamed constructs.
